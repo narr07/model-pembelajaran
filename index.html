@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Interaktif Model Pembelajaran SD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Educator's Calm -->
+    <!-- Application Structure Plan: Aplikasi ini dirancang sebagai dasbor interaktif satu halaman, bukan sebagai dokumen linear. Struktur ini dipilih untuk memungkinkan pengguna (guru/pendidik) dengan cepat menemukan, memfilter, dan membandingkan model pembelajaran berdasarkan kebutuhan spesifik mereka, seperti tipe pembelajaran atau keterampilan yang ingin dikembangkan. Alur pengguna dimulai dari eksplorasi umum menggunakan filter, kemudian menyelam lebih dalam ke detail model yang dipilih, dan memvisualisasikan kekuatan model tersebut. Struktur ini mengutamakan kemudahan penggunaan dan pengambilan keputusan yang cepat, yang lebih efektif daripada membaca laporan panjang secara berurutan. -->
+    <!-- Visualization & Content Choices: Laporan Info: Kelebihan & Kelemahan -> Goal: Membandingkan kekuatan dan kelemahan secara cepat -> Viz/Method: Dua kolom berdampingan dengan ikon -> Interaction: Tampilan statis per model -> Justification: Memudahkan analisis SWOT visual. | Laporan Info: Relevansi model dengan berbagai keterampilan -> Goal: Memvisualisasikan kekuatan model -> Viz/Method: Radar Chart (Chart.js) -> Interaction: Dropdown untuk memilih model yang akan divisualisasikan -> Justification: Memberikan ringkasan visual yang kuat dan mudah dibandingkan antar model. | Laporan Info: Daftar model yang banyak -> Goal: Navigasi dan penemuan yang mudah -> Viz/Method: Daftar yang dapat difilter secara dinamis -> Interaction: Checkbox filter -> Justification: Memungkinkan pengguna menyaring model yang relevan dengan cepat. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F9F7F3; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 40vh; max-height: 400px; }
+        .nav-link.active { background-color: #D6CDBF; color: #4F463C; }
+        .filter-checkbox:checked + label { background-color: #A49582; color: white; border-color: #A49582; }
+        .smooth-scroll { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #F9F7F3; }
+        ::-webkit-scrollbar-thumb { background: #D6CDBF; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #A49582; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 bg-[#EFEAE4] p-4 md:p-6 sticky top-0 md:h-screen md:overflow-y-auto">
+            <h1 class="text-2xl font-bold text-[#4F463C] mb-6">Model Pembelajaran</h1>
+            <nav id="sidebar-nav" class="space-y-2">
+                <a href="#beranda" class="nav-link block font-semibold text-gray-700 hover:bg-gray-200 p-3 rounded-lg transition-colors duration-200 active">Beranda</a>
+                <a href="#visualisasi" class="nav-link block font-semibold text-gray-700 hover:bg-gray-200 p-3 rounded-lg transition-colors duration-200">Visualisasi Model</a>
+                <h3 class="text-sm font-bold text-gray-500 uppercase pt-4 pb-2">Daftar Model</h3>
+                <div id="model-links" class="space-y-1"></div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 p-4 sm:p-6 md:p-10 smooth-scroll md:h-screen md:overflow-y-auto">
+            
+            <!-- Beranda Section -->
+            <section id="beranda" class="mb-12">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-3xl font-bold text-[#4F463C] mb-4">Jelajahi Model Pembelajaran Inovatif untuk SD</h2>
+                    <p class="text-gray-600 leading-relaxed mb-6">
+                        Selamat datang di dasbor interaktif model pembelajaran. Aplikasi ini dirancang untuk membantu Anda, para pendidik, dalam memahami dan memilih metode pengajaran yang paling efektif sesuai dengan konteks Kurikulum Merdeka. Gunakan filter di bawah ini untuk menemukan model yang sesuai dengan tipe pembelajaran atau mata pelajaran yang Anda ampu, lalu klik pada nama model untuk melihat detail lengkapnya.
+                    </p>
+                </div>
+                
+                <!-- Filter Section -->
+                <div class="my-8">
+                    <h3 class="text-xl font-bold text-gray-700 mb-4">Saring Model Pembelajaran</h3>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h4 class="font-semibold mb-3 text-gray-600">Tipe Pembelajaran:</h4>
+                            <div id="filter-container-type" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-3 text-gray-600">Mata Pelajaran yang Cocok:</h4>
+                            <div id="filter-container-subject" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model List -->
+                <div id="model-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Model cards will be injected here by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Visualisasi Section -->
+            <section id="visualisasi" class="mb-12">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-3xl font-bold text-[#4F463C] mb-4">Visualisasi Kekuatan Model</h2>
+                    <p class="text-gray-600 leading-relaxed mb-6">
+                        Setiap model pembelajaran memiliki kekuatan unik dalam mengembangkan keterampilan siswa. Gunakan diagram radar di bawah ini untuk memvisualisasikan fokus utama dari setiap model. Pilih sebuah model dari daftar untuk melihat bagaimana model tersebut mendukung pengembangan berbagai keterampilan kunci seperti berpikir kritis, kolaborasi, dan kreativitas.
+                    </p>
+                    <div class="mb-6">
+                        <label for="model-selector" class="block text-sm font-medium text-gray-700 mb-2">Pilih Model untuk Divisualisasikan:</label>
+                        <select id="model-selector" class="w-full max-w-md p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A49582] focus:border-[#A49582]"></select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="modelRadarChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Model Details Section -->
+            <div id="model-details-container">
+                <!-- Detailed model views will be injected here -->
+            </div>
+
+        </main>
+    </div>
+
+<script>
+const modelData = [
+    {
+        id: "mind-mapping",
+        title: "Mind Mapping",
+        tags: ["Visual & Kinestetik", "Kreatif"],
+        subjects: ["IPA", "IPS", "Bahasa Indonesia"],
+        skills: { kritis: 4, kolaborasi: 2, kreatif: 5, mandiri: 4, komunikasi: 3 },
+        summary: "Teknik mencatat kreatif yang memaksimalkan potensi otak dengan mengorganisasi informasi secara visual dan bercabang, sesuai cara kerja alami otak.",
+        sintaks: [
+            "Mulai dari Tengah: Gunakan gambar atau kata kunci utama di tengah kertas.",
+            "Gunakan Gambar & Warna: Visualisasikan ide dengan gambar dan gunakan warna berbeda untuk setiap cabang.",
+            "Hubungkan Cabang: Buat cabang utama dari pusat, lalu kembangkan dengan sub-cabang.",
+            "Gunakan Garis Melengkung: Garis organik lebih menarik bagi otak daripada garis lurus.",
+            "Satu Kata Kunci per Garis: Membebaskan asosiasi dan kreativitas.",
+            "Gunakan Gambar di Seluruh Peta: Perkuat ingatan dengan simbol dan gambar di seluruh peta."
+        ],
+        strengths: [
+            "Meningkatkan kreativitas dan daya ingat.",
+            "Mempermudah pemahaman konsep kompleks.",
+            "Proses belajar menjadi lebih menyenangkan.",
+            "Siswa menjadi lebih aktif dan terlibat."
+        ],
+        weaknesses: [
+            "Membutuhkan waktu yang lebih lama.",
+            "Hanya siswa aktif yang terlibat penuh.",
+            "Guru harus menguasai materi secara mendalam untuk memeriksa variasi hasil."
+        ],
+        application: "Sangat cocok untuk merangkum materi, curah pendapat, dan memvisualisasikan hubungan antar konsep dalam pelajaran IPA (Ekosistem), IPS (Kerajaan), dan Bahasa Indonesia (Unsur Cerita).",
+        assessment: "Evaluasi dilakukan melalui rubrik yang menilai kelengkapan isi, struktur, penggunaan kata kunci, dan kreativitas visual. Observasi proses dan presentasi hasil juga penting."
+    },
+    {
+        id: "make-a-match",
+        title: "Make a Match",
+        tags: ["Kooperatif", "Kinestetik"],
+        subjects: ["Semua Mapel", "IPA", "IPS", "Matematika"],
+        skills: { kritis: 2, kolaborasi: 4, kreatif: 2, mandiri: 3, komunikasi: 4 },
+        summary: "Teknik pembelajaran kooperatif yang aktif dan menyenangkan, di mana siswa mencari pasangan kartu soal dan kartu jawaban dalam batas waktu tertentu.",
+        sintaks: [
+            "Persiapan Guru: Siapkan set kartu soal dan kartu jawaban.",
+            "Pembagian Kartu: Setiap siswa mendapatkan satu kartu (soal atau jawaban).",
+            "Pencarian Pasangan: Siswa bergerak aktif mencari pasangan kartunya.",
+            "Presentasi Pasangan: Pasangan yang terbentuk mempresentasikan hasilnya.",
+            "Pemberian Poin: Berikan penghargaan untuk pasangan yang benar.",
+            "Kocok Ulang Kartu: Ulangi permainan agar setiap siswa mendapat kartu berbeda."
+        ],
+        strengths: [
+            "Meningkatkan aktivitas belajar fisik dan kognitif.",
+            "Suasana belajar menyenangkan (belajar sambil bermain).",
+            "Meningkatkan pemahaman dan daya ingat.",
+            "Mendorong kerja sama dan interaksi sosial."
+        ],
+        weaknesses: [
+            "Membutuhkan persiapan matang dari guru.",
+            "Kelas bisa menjadi sangat gaduh jika tidak dikelola baik.",
+            "Memerlukan waktu relatif banyak."
+        ],
+        application: "Efektif untuk materi hafalan atau pencocokan konsep di berbagai mata pelajaran. Contoh: IPA (hewan dan cara adaptasinya), IPS (pahlawan dan perannya), Matematika (soal dan jawaban).",
+        assessment: "Penilaian melalui observasi keaktifan, ketepatan pasangan yang ditemukan, dan kemampuan menjelaskan hubungan antar kartu saat presentasi. Tes singkat setelahnya dapat mengukur pemahaman individu."
+    },
+    {
+        id: "sosiodrama",
+        title: "Sosiodrama",
+        tags: ["Simulasi & Peran", "Kooperatif"],
+        subjects: ["PKn", "IPS", "Bahasa Indonesia"],
+        skills: { kritis: 4, kolaborasi: 5, kreatif: 4, mandiri: 2, komunikasi: 5 },
+        summary: "Metode bermain peran spontan untuk memecahkan masalah sosial, memberikan pemahaman dan penghayatan melalui pengalaman langsung yang emosional dan interaktif.",
+        sintaks: [
+            "Pemanasan: Guru memperkenalkan masalah sosial yang menarik.",
+            "Memilih Pemeran: Siswa dipilih untuk memerankan karakter.",
+            "Menata Panggung: Ruang kelas diatur menjadi panggung sederhana.",
+            "Memainkan Peran: Para pemeran beraksi secara spontan tanpa naskah.",
+            "Diskusi dan Evaluasi: Seluruh kelas (pemeran dan pengamat) mendiskusikan drama, perasaan, dan solusi.",
+            "Generalisasi: Menghubungkan masalah dalam drama dengan kehidupan nyata."
+        ],
+        strengths: [
+            "Pembelajaran menjadi sangat menarik dan berkesan.",
+            "Mengembangkan empati dan keterampilan sosial.",
+            "Memberikan pengalaman belajar langsung yang bermakna.",
+            "Melatih keberanian dan komunikasi lisan."
+        ],
+        weaknesses: [
+            "Memerlukan waktu yang panjang.",
+            "Membutuhkan kreativitas tinggi dari guru untuk merancang skenario.",
+            "Siswa pemalu mungkin enggan berpartisipasi."
+        ],
+        application: "Sangat cocok untuk mata pelajaran yang berfokus pada nilai dan sikap seperti PKn (menghargai perbedaan), IPS (resolusi konflik), dan Bahasa Indonesia (mendalami karakter cerita).",
+        assessment: "Evaluasi bersifat kualitatif melalui observasi partisipasi, penghayatan peran, dan kontribusi dalam diskusi. Fokusnya pada proses pemecahan masalah, bukan kualitas akting."
+    },
+    {
+        id: "pjbl",
+        title: "Project-Based Learning (PjBL)",
+        tags: ["Proyek & Masalah", "Kontekstual", "Kooperatif"],
+        subjects: ["IPAS", "Tematik", "Bahasa Indonesia"],
+        skills: { kritis: 5, kolaborasi: 5, kreatif: 5, mandiri: 5, komunikasi: 4 },
+        summary: "Model pembelajaran jangka panjang yang berpusat pada siswa untuk melakukan investigasi mendalam terhadap suatu masalah autentik, yang berpuncak pada sebuah produk atau presentasi.",
+        sintaks: [
+            "Pertanyaan Mendasar: Pembelajaran dimulai dengan pertanyaan menantang.",
+            "Merancang Proyek: Siswa merancang langkah-langkah dan hasil akhir proyek.",
+            "Menyusun Jadwal: Guru dan siswa menyusun linimasa pengerjaan.",
+            "Memonitor Proyek: Guru memantau, memfasilitasi, dan memberi umpan balik.",
+            "Menguji Hasil: Hasil proyek dinilai kualitasnya menggunakan rubrik.",
+            "Mengevaluasi Pengalaman: Siswa dan guru merefleksikan seluruh proses."
+        ],
+        strengths: [
+            "Meningkatkan motivasi karena relevan dengan dunia nyata.",
+            "Mengembangkan keterampilan abad ke-21 secara komprehensif.",
+            "Menghasilkan pemahaman yang lebih dalam dan tahan lama.",
+            "Mendorong pembelajaran mandiri dan kolaboratif."
+        ],
+        weaknesses: [
+            "Membutuhkan waktu yang lama dan perencanaan matang.",
+            "Memerlukan fasilitas dan sumber belajar yang memadai.",
+            "Penilaian lebih kompleks daripada tes biasa."
+        ],
+        application: "Merupakan inti dari Proyek Penguatan Profil Pelajar Pancasila (P5) dalam Kurikulum Merdeka. Ideal untuk pembelajaran tematik terpadu, seperti proyek membuat 'Buku Mini Keberagaman Budaya' dalam pelajaran IPAS.",
+        assessment: "Asesmen bersifat autentik dan berkelanjutan, meliputi penilaian formatif (observasi, jurnal) dan sumatif (penilaian produk/presentasi menggunakan rubrik), serta penilaian diri dan teman sebaya."
+    },
+    {
+        id: "pbl",
+        title: "Problem-Based Learning (PBL)",
+        tags: ["Proyek & Masalah", "Inkuiri", "Kontekstual"],
+        subjects: ["Tematik", "IPAS", "Matematika"],
+        skills: { kritis: 5, kolaborasi: 4, kreatif: 4, mandiri: 5, komunikasi: 4 },
+        summary: "Model pembelajaran yang diawali dengan penyajian masalah nyata sebagai konteks bagi siswa untuk belajar berpikir kritis, memecahkan masalah, dan belajar secara mandiri.",
+        sintaks: [
+            "Orientasi pada Masalah: Guru menyajikan masalah nyata kepada siswa.",
+            "Mengorganisasi Siswa: Siswa mendefinisikan masalah dan tugas belajar.",
+            "Membimbing Penyelidikan: Guru mendorong siswa mengumpulkan informasi.",
+            "Mengembangkan & Menyajikan Hasil: Siswa menyusun solusi dan mempresentasikannya.",
+            "Menganalisis & Mengevaluasi: Siswa dan guru merefleksikan proses pemecahan masalah."
+        ],
+        strengths: [
+            "Meningkatkan keterampilan berpikir kritis dan pemecahan masalah.",
+            "Meningkatkan motivasi dan kemandirian belajar.",
+            "Mendorong kolaborasi dan komunikasi.",
+            "Pemahaman konsep menjadi lebih mendalam."
+        ],
+        weaknesses: [
+            "Membutuhkan waktu lebih banyak.",
+            "Tidak semua materi cocok disajikan dalam format PBL.",
+            "Memerlukan guru yang terampil merancang masalah autentik."
+        ],
+        application: "Sangat cocok untuk pembelajaran tematik. Contoh: menyajikan masalah 'sampah plastik di kantin sekolah' yang dapat dianalisis dari sudut pandang IPAS, Matematika (menghitung volume sampah), dan Bahasa Indonesia (membuat poster kampanye).",
+        assessment: "Asesmen autentik berfokus pada proses dan hasil, meliputi penilaian kinerja (diskusi, investigasi), penilaian produk (laporan, presentasi), dan tes pemahaman konsep."
+    },
+    {
+        id: "jigsaw",
+        title: "Jigsaw",
+        tags: ["Kooperatif"],
+        subjects: ["IPS", "IPA", "PKn"],
+        skills: { kritis: 3, kolaborasi: 5, kreatif: 2, mandiri: 4, komunikasi: 5 },
+        summary: "Model pembelajaran kooperatif di mana siswa bekerja dalam kelompok kecil, menjadi 'ahli' pada satu bagian materi, lalu mengajarkan bagian tersebut kepada anggota kelompok asalnya.",
+        sintaks: [
+            "Pembentukan Kelompok Asal: Siswa dibagi menjadi kelompok heterogen.",
+            "Pembentukan Kelompok Ahli: Siswa dengan topik yang sama berkumpul di kelompok ahli untuk mendiskusikan materi.",
+            "Diskusi Kelompok Ahli: Setiap anggota kelompok ahli mendalami sub-topik mereka.",
+            "Kembali ke Kelompok Asal: Siswa kembali ke kelompok asal dan secara bergantian mengajarkan sub-topik yang telah mereka kuasai.",
+            "Evaluasi: Guru memberikan kuis atau evaluasi individual untuk mengukur pemahaman."
+        ],
+        strengths: [
+            "Meningkatkan rasa tanggung jawab dan saling ketergantungan positif.",
+            "Siswa belajar dari teman sebaya (peer teaching).",
+            "Meningkatkan keterampilan komunikasi dan mendengarkan.",
+            "Semua siswa terlibat aktif."
+        ],
+        weaknesses: [
+            "Membutuhkan manajemen waktu dan kelas yang sangat baik.",
+            "Jika ada siswa yang tidak menguasai materi di kelompok ahli, informasi menjadi tidak lengkap.",
+            "Membutuhkan waktu lebih lama."
+        ],
+        application: "Sangat efektif untuk materi yang dapat dibagi menjadi beberapa sub-topik yang tidak tumpang tindih, seperti IPS (mempelajari berbagai kerajaan), IPA (mempelajari berbagai sistem organ), atau PKn (mempelajari berbagai lembaga negara).",
+        assessment: "Penilaian utama adalah melalui kuis atau tes individu setelah sesi diskusi. Observasi terhadap partisipasi di kelompok ahli dan kelompok asal juga penting."
+    },
+    {
+        id: "ctl",
+        title: "Contextual Teaching & Learning (CTL)",
+        tags: ["Kontekstual", "Inkuiri"],
+        subjects: ["Semua Mapel", "IPAS", "Matematika"],
+        skills: { kritis: 4, kolaborasi: 4, kreatif: 3, mandiri: 4, komunikasi: 3 },
+        summary: "Konsep belajar yang membantu guru mengaitkan materi pelajaran dengan situasi dunia nyata siswa, sehingga pembelajaran menjadi lebih bermakna dan relevan.",
+        sintaks: [
+            "Konstruktivisme: Membangkitkan pengetahuan awal siswa.",
+            "Inkuiri: Siswa mengidentifikasi masalah, mengumpulkan data, dan menyimpulkan.",
+            "Bertanya: Guru dan siswa aktif bertanya untuk menggali pemahaman.",
+            "Masyarakat Belajar: Siswa bekerja dalam kelompok untuk berdiskusi.",
+            "Pemodelan: Guru memberikan contoh atau model.",
+            "Refleksi: Siswa merenungkan apa yang telah dipelajari.",
+            "Penilaian Autentik: Menilai kinerja siswa dalam tugas-tugas nyata."
+        ],
+        strengths: [
+            "Pembelajaran menjadi lebih bermakna dan tidak mudah dilupakan.",
+            "Meningkatkan motivasi belajar siswa.",
+            "Mengembangkan keterampilan berpikir kritis dan pemecahan masalah.",
+            "Mendorong siswa belajar secara aktif dan mandiri."
+        ],
+        weaknesses: [
+            "Membutuhkan waktu lebih lama untuk persiapan dan pelaksanaan.",
+            "Guru dituntut lebih kreatif dalam mengelola sumber belajar.",
+            "Tidak semua topik mudah dikontekstualisasikan."
+        ],
+        application: "Merupakan 'roh' dari Kurikulum Merdeka. Contoh: dalam pelajaran Matematika, siswa belajar konsep jual-beli dengan melakukan simulasi di kantin sekolah. Dalam IPAS, siswa belajar tentang kebutuhan dengan membuat anggaran belanja mingguan.",
+        assessment: "Penilaian bersifat autentik, fokus pada apa yang bisa siswa lakukan dengan pengetahuannya. Tekniknya meliputi penilaian kinerja, portofolio, proyek, dan jurnal siswa."
+    },
+    {
+        id: "nht",
+        title: "Numbered Head Together (NHT)",
+        tags: ["Kooperatif"],
+        subjects: ["Semua Mapel", "IPS", "Matematika"],
+        skills: { kritis: 3, kolaborasi: 5, kreatif: 1, mandiri: 3, komunikasi: 4 },
+        summary: "Struktur pembelajaran kooperatif untuk memastikan setiap anggota kelompok bertanggung jawab menguasai materi, karena setiap siswa memiliki kemungkinan yang sama untuk dipanggil mewakili kelompoknya.",
+        sintaks: [
+            "Penomoran: Setiap siswa dalam kelompok diberi nomor.",
+            "Mengajukan Pertanyaan: Guru mengajukan pertanyaan.",
+            "Berpikir Bersama: Siswa dalam kelompok berdiskusi untuk menemukan jawaban dan memastikan semua anggota tahu.",
+            "Menjawab: Guru memanggil nomor acak, dan siswa dengan nomor tersebut dari setiap kelompok menjawab."
+        ],
+        strengths: [
+            "Meningkatkan partisipasi dan tanggung jawab individu.",
+            "Semua siswa memiliki kesempatan yang sama untuk aktif.",
+            "Mengembangkan keterampilan kerja sama.",
+            "Siswa yang kurang mampu belajar dari teman sebaya."
+        ],
+        weaknesses: [
+            "Diskusi bisa didominasi siswa yang pandai.",
+            "Membutuhkan waktu lebih untuk diskusi.",
+            "Perlu manajemen yang baik saat beberapa siswa menjawab bersamaan."
+        ],
+        application: "Efektif untuk semua mata pelajaran sebagai cara untuk meninjau pemahaman konsep. Contoh: dalam IPS, guru bertanya tentang fungsi lembaga sosial, lalu memanggil nomor acak untuk menjawab.",
+        assessment: "Evaluasi dilakukan dengan menilai kualitas jawaban lisan dari siswa yang dipanggil. Observasi selama diskusi kelompok dan tes tulis di akhir pelajaran juga dapat digunakan."
+    }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modelList = document.getElementById('model-list');
+    const modelLinks = document.getElementById('model-links');
+    const modelDetailsContainer = document.getElementById('model-details-container');
+    const filterContainerType = document.getElementById('filter-container-type');
+    const filterContainerSubject = document.getElementById('filter-container-subject');
+    const modelSelector = document.getElementById('model-selector');
+    const sidebarNav = document.getElementById('sidebar-nav');
+    const mainContent = document.getElementById('main-content');
+
+    let activeFilters = { type: [], subject: [] };
+    let radarChart;
+
+    function getUniqueValues(key) {
+        const allValues = modelData.flatMap(model => model[key]);
+        return [...new Set(allValues)].sort();
+    }
+
+    function createFilters() {
+        const types = getUniqueValues('tags');
+        const subjects = getUniqueValues('subjects');
+
+        types.forEach(type => {
+            const filterEl = document.createElement('div');
+            filterEl.innerHTML = `
+                <input type="checkbox" id="type-${type}" value="${type}" class="filter-checkbox hidden" data-filter-type="type">
+                <label for="type-${type}" class="cursor-pointer px-4 py-2 border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors">${type}</label>
+            `;
+            filterContainerType.appendChild(filterEl);
+        });
+
+        subjects.forEach(subject => {
+            const filterEl = document.createElement('div');
+            filterEl.innerHTML = `
+                <input type="checkbox" id="subject-${subject}" value="${subject}" class="filter-checkbox hidden" data-filter-type="subject">
+                <label for="subject-${subject}" class="cursor-pointer px-4 py-2 border border-gray-300 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors">${subject}</label>
+            `;
+            filterContainerSubject.appendChild(filterEl);
+        });
+
+        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', handleFilterChange);
+        });
+    }
+
+    function handleFilterChange(e) {
+        const { value, checked, dataset } = e.target;
+        const filterType = dataset.filterType;
+
+        if (checked) {
+            activeFilters[filterType].push(value);
+        } else {
+            activeFilters[filterType] = activeFilters[filterType].filter(item => item !== value);
+        }
+        renderModels();
+    }
+
+    function renderModels() {
+        modelList.innerHTML = '';
+        
+        const filteredModels = modelData.filter(model => {
+            const typeMatch = activeFilters.type.length === 0 || activeFilters.type.some(t => model.tags.includes(t));
+            const subjectMatch = activeFilters.subject.length === 0 || activeFilters.subject.some(s => model.subjects.includes(s));
+            return typeMatch && subjectMatch;
+        });
+
+        if (filteredModels.length === 0) {
+            modelList.innerHTML = `<p class="text-gray-500 col-span-full text-center">Tidak ada model yang cocok dengan kriteria filter Anda.</p>`;
+            return;
+        }
+
+        filteredModels.forEach(model => {
+            const card = document.createElement('div');
+            card.className = 'bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:shadow-md hover:border-[#A49582] transition-all duration-300 transform hover:-translate-y-1';
+            card.innerHTML = `
+                <h3 class="text-xl font-bold text-[#4F463C] mb-2">${model.title}</h3>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    ${model.tags.map(tag => `<span class="bg-[#EFEAE4] text-[#4F463C] text-xs font-semibold px-2.5 py-1 rounded-full">${tag}</span>`).join('')}
+                </div>
+                <p class="text-gray-600 text-sm mb-4">${model.summary}</p>
+                <a href="#${model.id}" class="font-semibold text-[#A49582] hover:underline">Lihat Detail &rarr;</a>
+            `;
+            modelList.appendChild(card);
+        });
+    }
+
+    function renderModelDetails() {
+        modelData.forEach(model => {
+            const detailSection = document.createElement('section');
+            detailSection.id = model.id;
+            detailSection.className = 'pt-16 -mt-16 mb-12'; // pt for scroll offset
+            detailSection.innerHTML = `
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-3xl font-bold text-[#4F463C] mb-4">${model.title}</h2>
+                    <p class="text-gray-600 italic mb-6">${model.summary}</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-lg font-semibold mb-3 text-gray-700 border-b-2 border-[#EFEAE4] pb-2">Langkah-langkah Implementasi</h4>
+                            <ol class="list-decimal list-inside space-y-3 text-gray-600">
+                                ${model.sintaks.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold mb-3 text-gray-700 border-b-2 border-[#EFEAE4] pb-2">Analisis Model</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <h5 class="font-bold text-green-700 mb-2">Kelebihan</h5>
+                                    <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                                        ${model.strengths.map(s => `<li>${s}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 class="font-bold text-red-700 mb-2">Kelemahan</h5>
+                                    <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                                        ${model.weaknesses.map(w => `<li>${w}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8">
+                        <h4 class="text-lg font-semibold mb-3 text-gray-700 border-b-2 border-[#EFEAE4] pb-2">Penerapan & Asesmen di SD</h4>
+                        <p class="text-gray-600 mb-3"><strong class="font-semibold">Contoh Penerapan:</strong> ${model.application}</p>
+                        <p class="text-gray-600"><strong class="font-semibold">Saran Asesmen:</strong> ${model.assessment}</p>
+                    </div>
+                </div>
+            `;
+            modelDetailsContainer.appendChild(detailSection);
+        });
+    }
+
+    function populateSidebarLinks() {
+        modelData.forEach(model => {
+            const link = document.createElement('a');
+            link.href = `#${model.id}`;
+            link.textContent = model.title;
+            link.className = 'nav-link block text-gray-600 hover:text-black p-2 rounded-lg transition-colors duration-200 text-sm';
+            modelLinks.appendChild(link);
+        });
+    }
+
+    function populateModelSelector() {
+        modelData.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.title;
+            modelSelector.appendChild(option);
+        });
+        modelSelector.addEventListener('change', (e) => updateRadarChart(e.target.value));
+    }
+
+    function createRadarChart() {
+        const ctx = document.getElementById('modelRadarChart').getContext('2d');
+        const initialModel = modelData[0];
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Berpikir Kritis', 'Kolaborasi', 'Kreatif', 'Mandiri', 'Komunikasi'],
+                datasets: [{
+                    label: initialModel.title,
+                    data: Object.values(initialModel.skills),
+                    backgroundColor: 'rgba(164, 149, 130, 0.2)',
+                    borderColor: 'rgba(164, 149, 130, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(164, 149, 130, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(164, 149, 130, 1)'
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: '#EFEAE4' },
+                        grid: { color: '#D6CDBF' },
+                        pointLabels: {
+                            font: { size: 12, weight: 'bold' },
+                            color: '#4F463C'
+                        },
+                        ticks: {
+                            color: '#A49582',
+                            backdropColor: '#F9F7F3',
+                            stepSize: 1,
+                            max: 5,
+                            min: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: { size: 14, weight: 'bold' },
+                            color: '#4F463C'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateRadarChart(modelId) {
+        const model = modelData.find(m => m.id === modelId);
+        if (model) {
+            radarChart.data.datasets[0].label = model.title;
+            radarChart.data.datasets[0].data = Object.values(model.skills);
+            radarChart.update();
+        }
+    }
+    
+    function handleNavClick(e) {
+        if (e.target.tagName === 'A') {
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const targetId = e.target.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                const topPos = targetElement.getBoundingClientRect().top + mainContent.scrollTop - 20;
+                mainContent.scrollTo({ top: topPos, behavior: 'smooth' });
+            }
+        }
+    }
+
+    sidebarNav.addEventListener('click', handleNavClick);
+    
+    function init() {
+        createFilters();
+        renderModels();
+        renderModelDetails();
+        populateSidebarLinks();
+        populateModelSelector();
+        createRadarChart();
+        updateRadarChart(modelData[0].id);
+    }
+
+    init();
+});
+</script>
+
+</body>
+</html>
